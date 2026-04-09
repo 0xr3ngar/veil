@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/tls"
 	"fmt"
 	"log"
 	"net/http"
@@ -101,31 +100,10 @@ func cmdStart() {
 		}
 	}()
 
-	blockedHandler := webSrv.BlockedHandler()
-
 	go func() {
 		log.Println("blocked page listening on http://127.0.0.1:80")
-		if err := http.ListenAndServe("127.0.0.1:80", blockedHandler); err != nil {
-			log.Printf("blocked page (HTTP) error: %v", err)
-		}
-	}()
-
-	go func() {
-		cert, err := webui.GenerateSelfSignedCert()
-		if err != nil {
-			log.Printf("failed to generate TLS cert: %v", err)
-			return
-		}
-		tlsSrv := &http.Server{
-			Addr:    "127.0.0.1:443",
-			Handler: blockedHandler,
-			TLSConfig: &tls.Config{
-				Certificates: []tls.Certificate{cert},
-			},
-		}
-		log.Println("blocked page listening on https://127.0.0.1:443")
-		if err := tlsSrv.ListenAndServeTLS("", ""); err != nil {
-			log.Printf("blocked page (HTTPS) error: %v", err)
+		if err := http.ListenAndServe("127.0.0.1:80", webSrv.BlockedHandler()); err != nil {
+			log.Printf("blocked page server error: %v", err)
 		}
 	}()
 
