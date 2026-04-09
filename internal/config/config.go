@@ -74,7 +74,7 @@ func (c *Config) Save() error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(c.path, data, 0644)
+	return os.WriteFile(c.path, data, 0600)
 }
 
 func (c *Config) SetPath(path string) {

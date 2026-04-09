@@ -2,6 +2,7 @@ package lock
 
 import (
 	"crypto/hmac"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -22,11 +23,25 @@ func lockPath() string {
 	return filepath.Join(home, ".veil", "lock.json")
 }
 
-func machineKey() []byte {
-	hostname, _ := os.Hostname()
+func keyPath() string {
 	home, _ := os.UserHomeDir()
-	h := sha256.Sum256([]byte(hostname + home + "veil-lock-key"))
-	return h[:]
+	return filepath.Join(home, ".veil", "lock.key")
+}
+
+func machineKey() []byte {
+	data, err := os.ReadFile(keyPath())
+	if err == nil && len(data) == 32 {
+		return data
+	}
+	key := make([]byte, 32)
+	if _, err := rand.Read(key); err != nil {
+		hostname, _ := os.Hostname()
+		h := sha256.Sum256([]byte(hostname + fmt.Sprintf("%d", time.Now().UnixNano())))
+		return h[:]
+	}
+	os.MkdirAll(filepath.Dir(keyPath()), 0700)
+	os.WriteFile(keyPath(), key, 0600)
+	return key
 }
 
 func sign(lockedAt, lockedUntil time.Time) string {
@@ -57,7 +72,7 @@ func SetLock(duration time.Duration) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(lockPath(), data, 0644)
+	return os.WriteFile(lockPath(), data, 0600)
 }
 
 func ExtendLock(duration time.Duration) error {
@@ -78,7 +93,7 @@ func ExtendLock(duration time.Duration) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(lockPath(), data, 0644)
+	return os.WriteFile(lockPath(), data, 0600)
 }
 
 func GetLock() (*LockState, error) {

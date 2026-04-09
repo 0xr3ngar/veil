@@ -213,7 +213,7 @@ func (w *Watchdog) writeHostsEntries(hostsPath string, domains []string) {
 	}
 	newLines = append(newLines, "# END VEIL")
 
-	os.WriteFile(hostsPath, []byte(strings.Join(newLines, "\n")), 0644)
+	atomicWriteFile(hostsPath, []byte(strings.Join(newLines, "\n")), 0644)
 }
 
 func WriteInitialHosts(domains []string, redirectIP string) error {
@@ -246,13 +246,34 @@ func WriteInitialHosts(domains []string, redirectIP string) error {
 	}
 	newLines = append(newLines, "# END VEIL")
 
-	return os.WriteFile(hostsPath, []byte(strings.Join(newLines, "\n")), 0644)
+	return atomicWriteFile(hostsPath, []byte(strings.Join(newLines, "\n")), 0644)
+}
+
+func atomicWriteFile(path string, data []byte, perm os.FileMode) error {
+	tmp := path + ".veil.tmp"
+	if err := os.WriteFile(tmp, data, perm); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
 }
 
 func InstallLaunchDaemon(veilBinary string) error {
 	if runtime.GOOS != "darwin" {
 		return fmt.Errorf("launchd is only available on macOS")
 	}
+
+	absPath, err := filepath.Abs(veilBinary)
+	if err != nil {
+		return fmt.Errorf("resolving binary path: %w", err)
+	}
+	info, err := os.Stat(absPath)
+	if err != nil {
+		return fmt.Errorf("binary not found at %s: %w", absPath, err)
+	}
+	if info.IsDir() {
+		return fmt.Errorf("%s is a directory, not a binary", absPath)
+	}
+	veilBinary = absPath
 
 	plist := fmt.Sprintf(`<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -277,7 +298,7 @@ func InstallLaunchDaemon(veilBinary string) error {
 </plist>`, veilBinary)
 
 	daemonPath := "/Library/LaunchDaemons/com.veil.dns.plist"
-	if err := os.WriteFile(daemonPath, []byte(plist), 0644); err != nil {
+	if err := os.WriteFile(daemonPath, []byte(plist), 0600); err != nil {
 		return fmt.Errorf("writing launch daemon: %w", err)
 	}
 

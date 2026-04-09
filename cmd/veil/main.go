@@ -114,6 +114,10 @@ func cmdStart() {
 		}
 	}()
 
+	if err := vdns.DropPrivileges(); err != nil {
+		log.Printf("warning: could not drop privileges: %v", err)
+	}
+
 	if err := writePID(); err != nil {
 		log.Printf("warning: could not write PID file: %v", err)
 	}
@@ -422,7 +426,7 @@ func pidPath() string {
 }
 
 func writePID() error {
-	return os.WriteFile(pidPath(), []byte(strconv.Itoa(os.Getpid())), 0644)
+	return os.WriteFile(pidPath(), []byte(strconv.Itoa(os.Getpid())), 0600)
 }
 
 func readPID() (int, error) {

@@ -50,7 +50,7 @@ func saveCooldown(state *CooldownState) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(cooldownPath(), data, 0644)
+	return os.WriteFile(cooldownPath(), data, 0600)
 }
 
 func RequestUnblock(domain string) (*PendingUnblock, error) {
