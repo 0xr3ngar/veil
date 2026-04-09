@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -162,8 +163,8 @@ func (a *API) handleBlockDomain(w http.ResponseWriter, r *http.Request) {
 	}
 
 	domain := strings.TrimSpace(strings.ToLower(body.Domain))
-	if domain == "" {
-		http.Error(w, "domain is required", http.StatusBadRequest)
+	if domain == "" || !isValidDomain(domain) {
+		http.Error(w, "invalid domain", http.StatusBadRequest)
 		return
 	}
 
@@ -195,8 +196,8 @@ func (a *API) handleAllowDomain(w http.ResponseWriter, r *http.Request) {
 	}
 
 	domain := strings.TrimSpace(strings.ToLower(body.Domain))
-	if domain == "" {
-		http.Error(w, "domain is required", http.StatusBadRequest)
+	if domain == "" || !isValidDomain(domain) {
+		http.Error(w, "invalid domain", http.StatusBadRequest)
 		return
 	}
 
@@ -274,6 +275,12 @@ func appendUnique(slice []string, val string) []string {
 		return slice
 	}
 	return append(slice, val)
+}
+
+var validDomain = regexp.MustCompile(`^([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}$`)
+
+func isValidDomain(domain string) bool {
+	return len(domain) <= 253 && validDomain.MatchString(domain)
 }
 
 func removeStr(slice []string, val string) []string {
