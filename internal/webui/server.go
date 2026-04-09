@@ -76,7 +76,7 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /partial/settings", s.actionSaveSettings)
 	mux.HandleFunc("POST /partial/lock", s.actionSetLock)
 
-	return rateLimitMiddleware(csrfMiddleware(mux))
+	return localhostOnly(rateLimitMiddleware(csrfMiddleware(mux)))
 }
 
 func (s *Server) BlockedHandler() http.Handler {

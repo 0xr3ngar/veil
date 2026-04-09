@@ -3,6 +3,7 @@ package webui
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"net"
 	"net/http"
 	"sync"
 	"time"
@@ -101,6 +102,17 @@ func rateLimitMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !apiLimiter.allow() {
 			http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func localhostOnly(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		host, _, _ := net.SplitHostPort(r.RemoteAddr)
+		if host != "127.0.0.1" && host != "::1" && host != "localhost" {
+			http.Error(w, "forbidden", http.StatusForbidden)
 			return
 		}
 		next.ServeHTTP(w, r)
