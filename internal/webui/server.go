@@ -34,10 +34,24 @@ func NewServer(b *blocker.Blocker, cfg *config.Config, a *api.API) *Server {
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 
+	// JSON API (kept for CLI) — register first with specific methods
+	mux.HandleFunc("GET /api/stats", s.apiProxy)
+	mux.HandleFunc("GET /api/logs", s.apiProxy)
+	mux.HandleFunc("GET /api/config", s.apiProxy)
+	mux.HandleFunc("PUT /api/config", s.apiProxy)
+	mux.HandleFunc("GET /api/categories", s.apiProxy)
+	mux.HandleFunc("PUT /api/categories/{name}", s.apiProxy)
+	mux.HandleFunc("GET /api/domains", s.apiProxy)
+	mux.HandleFunc("POST /api/domains/block", s.apiProxy)
+	mux.HandleFunc("POST /api/domains/allow", s.apiProxy)
+	mux.HandleFunc("DELETE /api/domains/{domain}", s.apiProxy)
+	mux.HandleFunc("GET /api/lock", s.apiProxy)
+	mux.HandleFunc("GET /api/pending", s.apiProxy)
+
 	// Pages
-	mux.HandleFunc("GET /", s.servePage("web/index.html"))
-	mux.HandleFunc("GET /domains", s.servePage("web/domains.html"))
-	mux.HandleFunc("GET /settings", s.servePage("web/settings.html"))
+	mux.HandleFunc("GET /{$}", s.servePage("index.html"))
+	mux.HandleFunc("GET /domains", s.servePage("domains.html"))
+	mux.HandleFunc("GET /settings", s.servePage("settings.html"))
 
 	// Static files
 	mux.Handle("GET /static/", http.StripPrefix("/static/", http.FileServerFS(webstatic.StaticFS)))
@@ -61,11 +75,11 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /partial/settings", s.actionSaveSettings)
 	mux.HandleFunc("POST /partial/lock", s.actionSetLock)
 
-	// JSON API (kept for CLI)
-	apiHandler := s.api.Handler()
-	mux.Handle("/api/", apiHandler)
-
 	return mux
+}
+
+func (s *Server) apiProxy(w http.ResponseWriter, r *http.Request) {
+	s.api.Handler().ServeHTTP(w, r)
 }
 
 func (s *Server) servePage(path string) http.HandlerFunc {
