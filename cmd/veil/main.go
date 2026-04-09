@@ -7,12 +7,16 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"syscall"
+	"time"
 
 	"github.com/0xr3ngar/veil/internal/api"
 	"github.com/0xr3ngar/veil/internal/blocker"
+	"github.com/0xr3ngar/veil/internal/categories"
 	"github.com/0xr3ngar/veil/internal/config"
 	vdns "github.com/0xr3ngar/veil/internal/dns"
+	"github.com/0xr3ngar/veil/internal/lock"
 	"github.com/0xr3ngar/veil/internal/webui"
 )
 
@@ -29,6 +33,22 @@ func main() {
 		cmdStop()
 	case "status":
 		cmdStatus()
+	case "block":
+		cmdBlock()
+	case "allow":
+		cmdAllow()
+	case "unblock":
+		cmdUnblock()
+	case "cancel-unblock":
+		cmdCancelUnblock()
+	case "lock":
+		cmdLock()
+	case "list":
+		cmdList()
+	case "update":
+		cmdUpdate()
+	case "config":
+		cmdConfig()
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n", os.Args[1])
 		printUsage()
@@ -40,9 +60,17 @@ func printUsage() {
 	fmt.Println(`Usage: veil <command>
 
 Commands:
-  start     Start the DNS proxy and web UI
-  stop      Stop the running daemon
-  status    Show running status`)
+  start            Start the DNS proxy and web UI
+  stop             Stop the running daemon
+  status           Show running status
+  block <domain>   Add domain to blocklist
+  allow <domain>   Add domain to whitelist
+  unblock <domain> Request domain unblock (24h cooldown)
+  cancel-unblock <domain>  Cancel pending unblock
+  lock             Set or check time lock
+  list             Show all blocked domains
+  update           Re-download external blocklists
+  config           Show current config`)
 }
 
 func cmdStart() {
@@ -144,6 +172,203 @@ func cmdStatus() {
 	}
 
 	fmt.Printf("veil is running (pid %d)\n", pid)
+
+	if lock.IsLocked() {
+		fmt.Printf("lock: active (%s remaining)\n", formatDuration(lock.Remaining()))
+	} else {
+		fmt.Println("lock: inactive")
+	}
+}
+
+func cmdBlock() {
+	if len(os.Args) < 3 {
+		fmt.Fprintln(os.Stderr, "usage: veil block <domain>")
+		os.Exit(1)
+	}
+	domain := strings.ToLower(strings.TrimSpace(os.Args[2]))
+
+	cfg, err := config.Load(config.DefaultPath())
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+
+	cfg.Update(func(c *config.Config) {
+		for _, d := range c.CustomBlocked {
+			if d == domain {
+				return
+			}
+		}
+		c.CustomBlocked = append(c.CustomBlocked, domain)
+	})
+
+	if err := cfg.Save(); err != nil {
+		log.Fatalf("failed to save config: %v", err)
+	}
+	fmt.Printf("blocked: %s\n", domain)
+}
+
+func cmdAllow() {
+	if len(os.Args) < 3 {
+		fmt.Fprintln(os.Stderr, "usage: veil allow <domain>")
+		os.Exit(1)
+	}
+
+	if lock.IsLocked() {
+		fmt.Fprintln(os.Stderr, "cannot add allowed domains while locked")
+		os.Exit(1)
+	}
+
+	domain := strings.ToLower(strings.TrimSpace(os.Args[2]))
+
+	cfg, err := config.Load(config.DefaultPath())
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+
+	cfg.Update(func(c *config.Config) {
+		for _, d := range c.CustomAllowed {
+			if d == domain {
+				return
+			}
+		}
+		c.CustomAllowed = append(c.CustomAllowed, domain)
+	})
+
+	if err := cfg.Save(); err != nil {
+		log.Fatalf("failed to save config: %v", err)
+	}
+	fmt.Printf("allowed: %s\n", domain)
+}
+
+func cmdUnblock() {
+	if len(os.Args) < 3 {
+		fmt.Fprintln(os.Stderr, "usage: veil unblock <domain>")
+		os.Exit(1)
+	}
+
+	if lock.IsLocked() {
+		fmt.Fprintln(os.Stderr, "cannot unblock while locked")
+		os.Exit(1)
+	}
+
+	domain := strings.ToLower(strings.TrimSpace(os.Args[2]))
+	pending, err := lock.RequestUnblock(domain)
+	if err != nil {
+		log.Fatalf("failed to request unblock: %v", err)
+	}
+
+	fmt.Printf("unblock request queued for %s\n", domain)
+	fmt.Printf("will take effect at %s (in 24 hours)\n", pending.EffectAt.Format("Jan 2, 2006 15:04"))
+	fmt.Printf("cancel with: veil cancel-unblock %s\n", domain)
+}
+
+func cmdCancelUnblock() {
+	if len(os.Args) < 3 {
+		fmt.Fprintln(os.Stderr, "usage: veil cancel-unblock <domain>")
+		os.Exit(1)
+	}
+
+	domain := strings.ToLower(strings.TrimSpace(os.Args[2]))
+	if err := lock.CancelUnblock(domain); err != nil {
+		log.Fatalf("failed to cancel unblock: %v", err)
+	}
+	fmt.Printf("cancelled unblock for %s\n", domain)
+}
+
+func cmdLock() {
+	if len(os.Args) >= 3 && os.Args[2] == "--status" {
+		if lock.IsLocked() {
+			state, _ := lock.GetLock()
+			fmt.Printf("locked until %s (%s remaining)\n",
+				state.LockedUntil.Format("Jan 2, 2006 15:04"),
+				formatDuration(lock.Remaining()))
+		} else {
+			fmt.Println("not locked")
+		}
+		return
+	}
+
+	duration := "7d"
+	for i, arg := range os.Args {
+		if arg == "--duration" && i+1 < len(os.Args) {
+			duration = os.Args[i+1]
+		}
+	}
+
+	d, err := parseDuration(duration)
+	if err != nil {
+		log.Fatalf("invalid duration %q: %v", duration, err)
+	}
+
+	if err := lock.SetLock(d); err != nil {
+		log.Fatalf("failed to set lock: %v", err)
+	}
+	fmt.Printf("locked for %s (until %s)\n", duration, time.Now().Add(d).Format("Jan 2, 2006 15:04"))
+}
+
+func cmdList() {
+	cfg, err := config.Load(config.DefaultPath())
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+
+	fmt.Println("=== Categories ===")
+	for name, enabled := range cfg.Categories {
+		status := "OFF"
+		if enabled {
+			status = "ON"
+		}
+		count := len(categories.All[name])
+		if name == "adult" {
+			count = -1
+		}
+		if count >= 0 {
+			fmt.Printf("  %-15s %s (%d domains)\n", name, status, count)
+		} else {
+			fmt.Printf("  %-15s %s (external list)\n", name, status)
+		}
+	}
+
+	fmt.Println("\n=== Custom Blocked ===")
+	if len(cfg.CustomBlocked) == 0 {
+		fmt.Println("  (none)")
+	}
+	for _, d := range cfg.CustomBlocked {
+		fmt.Printf("  %s\n", d)
+	}
+
+	fmt.Println("\n=== Custom Allowed ===")
+	if len(cfg.CustomAllowed) == 0 {
+		fmt.Println("  (none)")
+	}
+	for _, d := range cfg.CustomAllowed {
+		fmt.Printf("  %s\n", d)
+	}
+}
+
+func cmdUpdate() {
+	fmt.Println("updating OISD adult list...")
+	domains, err := categories.FetchAdultList()
+	if err != nil {
+		log.Fatalf("failed to fetch list: %v", err)
+	}
+	if err := categories.SaveCache(domains); err != nil {
+		log.Fatalf("failed to save cache: %v", err)
+	}
+	fmt.Printf("updated: %d domains cached\n", len(domains))
+}
+
+func cmdConfig() {
+	cfg, err := config.Load(config.DefaultPath())
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+	fmt.Printf("config path: %s\n", config.DefaultPath())
+	fmt.Printf("upstream DNS: %s\n", cfg.UpstreamDNS)
+	fmt.Printf("redirect to: %s\n", cfg.RedirectTo)
+	fmt.Printf("DNS listen: %s\n", cfg.DNSListen)
+	fmt.Printf("API listen: %s\n", cfg.APIListen)
+	fmt.Printf("log blocked: %v\n", cfg.LogBlocked)
 }
 
 func pidPath() string {
@@ -165,4 +390,41 @@ func readPID() (int, error) {
 
 func removePID() {
 	os.Remove(pidPath())
+}
+
+func parseDuration(s string) (time.Duration, error) {
+	s = strings.TrimSpace(s)
+	if len(s) < 2 {
+		return 0, fmt.Errorf("too short")
+	}
+	num, err := strconv.Atoi(s[:len(s)-1])
+	if err != nil {
+		return 0, err
+	}
+	switch s[len(s)-1] {
+	case 'd':
+		return time.Duration(num) * 24 * time.Hour, nil
+	case 'w':
+		return time.Duration(num) * 7 * 24 * time.Hour, nil
+	case 'h':
+		return time.Duration(num) * time.Hour, nil
+	default:
+		return 0, fmt.Errorf("unknown unit %c (use d/w/h)", s[len(s)-1])
+	}
+}
+
+func formatDuration(d time.Duration) string {
+	if d <= 0 {
+		return "0s"
+	}
+	days := int(d.Hours()) / 24
+	hours := int(d.Hours()) % 24
+	minutes := int(d.Minutes()) % 60
+	if days > 0 {
+		return fmt.Sprintf("%dd %dh", days, hours)
+	}
+	if hours > 0 {
+		return fmt.Sprintf("%dh %dm", hours, minutes)
+	}
+	return fmt.Sprintf("%dm", minutes)
 }
