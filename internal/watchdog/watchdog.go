@@ -259,7 +259,7 @@ func InstallLaunchDaemon(veilBinary string) error {
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.veil.watchdog</string>
+    <string>com.veil.dns</string>
     <key>ProgramArguments</key>
     <array>
         <string>%s</string>
@@ -269,10 +269,14 @@ func InstallLaunchDaemon(veilBinary string) error {
     <true/>
     <key>KeepAlive</key>
     <true/>
+    <key>StandardOutPath</key>
+    <string>/var/log/veil.log</string>
+    <key>StandardErrorPath</key>
+    <string>/var/log/veil.log</string>
 </dict>
 </plist>`, veilBinary)
 
-	daemonPath := "/Library/LaunchDaemons/com.veil.watchdog.plist"
+	daemonPath := "/Library/LaunchDaemons/com.veil.dns.plist"
 	if err := os.WriteFile(daemonPath, []byte(plist), 0644); err != nil {
 		return fmt.Errorf("writing launch daemon: %w", err)
 	}
@@ -281,7 +285,7 @@ func InstallLaunchDaemon(veilBinary string) error {
 }
 
 func UninstallLaunchDaemon() error {
-	daemonPath := filepath.Join("/Library/LaunchDaemons", "com.veil.watchdog.plist")
+	daemonPath := filepath.Join("/Library/LaunchDaemons", "com.veil.dns.plist")
 	exec.Command("launchctl", "unload", daemonPath).Run()
 	return os.Remove(daemonPath)
 }

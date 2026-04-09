@@ -17,6 +17,7 @@ import (
 	"github.com/0xr3ngar/veil/internal/config"
 	vdns "github.com/0xr3ngar/veil/internal/dns"
 	"github.com/0xr3ngar/veil/internal/lock"
+	"github.com/0xr3ngar/veil/internal/watchdog"
 	"github.com/0xr3ngar/veil/internal/webui"
 )
 
@@ -49,6 +50,10 @@ func main() {
 		cmdUpdate()
 	case "config":
 		cmdConfig()
+	case "install":
+		cmdInstall()
+	case "uninstall":
+		cmdUninstall()
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command: %s\n", os.Args[1])
 		printUsage()
@@ -70,7 +75,9 @@ Commands:
   lock             Set or check time lock
   list             Show all blocked domains
   update           Re-download external blocklists
-  config           Show current config`)
+  config           Show current config
+  install          Install as startup service (launchd)
+  uninstall        Remove startup service`)
 }
 
 func cmdStart() {
@@ -376,6 +383,37 @@ func cmdConfig() {
 	fmt.Printf("DNS listen: %s\n", cfg.DNSListen)
 	fmt.Printf("API listen: %s\n", cfg.APIListen)
 	fmt.Printf("log blocked: %v\n", cfg.LogBlocked)
+}
+
+func cmdInstall() {
+	if os.Getuid() != 0 {
+		fmt.Fprintln(os.Stderr, "install requires root — run with sudo")
+		os.Exit(1)
+	}
+
+	binPath, err := os.Executable()
+	if err != nil {
+		log.Fatalf("could not determine binary path: %v", err)
+	}
+
+	if err := watchdog.InstallLaunchDaemon(binPath); err != nil {
+		log.Fatalf("failed to install: %v", err)
+	}
+	fmt.Println("veil installed as startup service")
+	fmt.Println("it will start automatically on boot and restart if killed")
+	fmt.Printf("logs: /var/log/veil.log\n")
+}
+
+func cmdUninstall() {
+	if os.Getuid() != 0 {
+		fmt.Fprintln(os.Stderr, "uninstall requires root — run with sudo")
+		os.Exit(1)
+	}
+
+	if err := watchdog.UninstallLaunchDaemon(); err != nil {
+		log.Fatalf("failed to uninstall: %v", err)
+	}
+	fmt.Println("veil startup service removed")
 }
 
 func pidPath() string {
