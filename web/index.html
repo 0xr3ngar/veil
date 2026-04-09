@@ -6,6 +6,12 @@
     <title>Veil</title>
     <link rel="stylesheet" href="/static/style.css">
     <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+    <script>
+    document.addEventListener('htmx:configRequest', function(e) {
+        var c = document.cookie.match(/veil_csrf=([^;]+)/);
+        if (c) e.detail.headers['X-CSRF-Token'] = c[1];
+    });
+    </script>
 </head>
 <body>
     <nav class="sidebar">
