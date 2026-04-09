@@ -1,0 +1,19 @@
+{
+  "upstream_dns": "8.8.8.8:53",
+  "redirect_to": "127.0.0.1",
+  "dns_listen": "127.0.0.1:53",
+  "api_listen": "127.0.0.1:8080",
+  "log_blocked": true,
+  "categories": {
+    "adult": true,
+    "social_media": true,
+    "gambling": false,
+    "streaming": false,
+    "doh_bypass": true
+  },
+  "custom_blocked": [
+    "reddit.com",
+    "news.ycombinator.com"
+  ],
+  "custom_allowed": []
+}
