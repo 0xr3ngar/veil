@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veil — Settings</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">
+            <span class="logo-mark">V</span>
+            <span class="logo-text">eil</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/">Dashboard</a></li>
+            <li><a href="/domains">Domains</a></li>
+            <li><a href="/settings" class="active">Settings</a></li>
+        </ul>
+        <div class="nav-footer">
+            <div class="lock-badge"
+                 hx-get="/partial/lock-badge"
+                 hx-trigger="load, every 10s"
+                 hx-swap="innerHTML">
+            </div>
+        </div>
+    </nav>
+
+    <main class="content">
+        <header class="page-header">
+            <h1>Settings</h1>
+            <p class="subtitle">Configure Veil behavior</p>
+        </header>
+
+        <section class="settings-section"
+                 hx-get="/partial/settings-form"
+                 hx-trigger="load"
+                 hx-swap="innerHTML">
+        </section>
+
+        <section class="lock-section">
+            <h2>Time Lock</h2>
+            <div class="lock-status"
+                 hx-get="/partial/lock-status"
+                 hx-trigger="load, every 5s"
+                 hx-swap="innerHTML">
+            </div>
+        </section>
+    </main>
+</body>
+</html>

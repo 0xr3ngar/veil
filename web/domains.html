@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veil — Domains</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">
+            <span class="logo-mark">V</span>
+            <span class="logo-text">eil</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/">Dashboard</a></li>
+            <li><a href="/domains" class="active">Domains</a></li>
+            <li><a href="/settings">Settings</a></li>
+        </ul>
+        <div class="nav-footer">
+            <div class="lock-badge"
+                 hx-get="/partial/lock-badge"
+                 hx-trigger="load, every 10s"
+                 hx-swap="innerHTML">
+            </div>
+        </div>
+    </nav>
+
+    <main class="content">
+        <header class="page-header">
+            <h1>Domains</h1>
+            <p class="subtitle">Manage blocked categories and custom domains</p>
+        </header>
+
+        <section class="categories-section">
+            <h2>Categories</h2>
+            <div class="category-grid"
+                 hx-get="/partial/categories"
+                 hx-trigger="load"
+                 hx-swap="innerHTML">
+            </div>
+        </section>
+
+        <section class="custom-section">
+            <h2>Custom Blocked</h2>
+            <form hx-post="/partial/domains/block"
+                  hx-target="#blocked-list"
+                  hx-swap="innerHTML"
+                  hx-on::after-request="this.reset()">
+                <div class="add-domain-form">
+                    <input type="text" name="domain" placeholder="Enter domain to block..." class="domain-input" required>
+                    <button type="submit" class="btn btn-block">Block</button>
+                </div>
+            </form>
+            <ul class="domain-list" id="blocked-list"
+                hx-get="/partial/domains/blocked"
+                hx-trigger="load"
+                hx-swap="innerHTML">
+            </ul>
+        </section>
+
+        <section class="custom-section">
+            <h2>Allowed (Whitelist)</h2>
+            <form hx-post="/partial/domains/allow"
+                  hx-target="#allowed-list"
+                  hx-swap="innerHTML"
+                  hx-on::after-request="this.reset()">
+                <div class="add-domain-form">
+                    <input type="text" name="domain" placeholder="Enter domain to allow..." class="domain-input" required>
+                    <button type="submit" class="btn btn-allow">Allow</button>
+                </div>
+            </form>
+            <ul class="domain-list" id="allowed-list"
+                hx-get="/partial/domains/allowed"
+                hx-trigger="load"
+                hx-swap="innerHTML">
+            </ul>
+        </section>
+
+        <section class="pending-section">
+            <h2>Pending Unblocks</h2>
+            <ul class="domain-list"
+                hx-get="/partial/pending"
+                hx-trigger="load, every 10s"
+                hx-swap="innerHTML">
+            </ul>
+        </section>
+    </main>
+</body>
+</html>

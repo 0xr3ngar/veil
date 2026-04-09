@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Veil</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+</head>
+<body>
+    <nav class="sidebar">
+        <div class="logo">
+            <span class="logo-mark">V</span>
+            <span class="logo-text">eil</span>
+        </div>
+        <ul class="nav-links">
+            <li><a href="/" class="active">Dashboard</a></li>
+            <li><a href="/domains">Domains</a></li>
+            <li><a href="/settings">Settings</a></li>
+        </ul>
+        <div class="nav-footer">
+            <div class="lock-badge"
+                 hx-get="/partial/lock-badge"
+                 hx-trigger="load, every 10s"
+                 hx-swap="innerHTML">
+            </div>
+        </div>
+    </nav>
+
+    <main class="content">
+        <header class="page-header">
+            <h1>Dashboard</h1>
+        </header>
+
+        <section class="stats-grid"
+                 hx-get="/partial/stats"
+                 hx-trigger="load, every 3s"
+                 hx-swap="innerHTML">
+        </section>
+
+        <section class="log-section">
+            <h2>Recent Blocks</h2>
+            <div class="log-table-wrap">
+                <table class="log-table">
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Domain</th>
+                            <th>Client</th>
+                        </tr>
+                    </thead>
+                    <tbody hx-get="/partial/logs"
+                           hx-trigger="load, every 3s"
+                           hx-swap="innerHTML">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</body>
+</html>
