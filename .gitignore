@@ -1,0 +1,6 @@
+/veil
+*.exe
+*.test
+*.out
+.veil/
+config.json
