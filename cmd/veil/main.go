@@ -3,14 +3,17 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"os/signal"
 	"strconv"
 	"syscall"
 
+	"github.com/0xr3ngar/veil/internal/api"
 	"github.com/0xr3ngar/veil/internal/blocker"
 	"github.com/0xr3ngar/veil/internal/config"
 	vdns "github.com/0xr3ngar/veil/internal/dns"
+	"github.com/0xr3ngar/veil/internal/webui"
 )
 
 func main() {
@@ -58,6 +61,16 @@ func cmdStart() {
 	log.Printf("loaded %d blocked domains", len(b.BlockedDomains()))
 
 	srv := vdns.NewServer(b, cfg.DNSListen, cfg.UpstreamDNS, cfg.RedirectTo)
+
+	a := api.New(b, cfg)
+	webSrv := webui.NewServer(b, cfg, a)
+
+	go func() {
+		log.Printf("web UI listening on http://%s", cfg.APIListen)
+		if err := http.ListenAndServe(cfg.APIListen, webSrv.Handler()); err != nil {
+			log.Printf("web server error: %v", err)
+		}
+	}()
 
 	if err := writePID(); err != nil {
 		log.Printf("warning: could not write PID file: %v", err)
