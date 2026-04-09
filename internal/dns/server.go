@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/0xr3ngar/veil/internal/blocker"
+	"github.com/0xr3ngar/veil/internal/quotes"
 	mdns "github.com/miekg/dns"
 )
 
@@ -118,7 +119,8 @@ func (s *Server) handleDNS(w mdns.ResponseWriter, r *mdns.Msg) {
 		}
 
 		w.WriteMsg(msg)
-		log.Printf("BLOCKED: %s -> %s", domain, s.getRedirectIP())
+		q := quotes.Random()
+		log.Printf("BLOCKED: %s -> %s | \"%s\" — %s", domain, s.getRedirectIP(), q.Text, q.Source)
 		return
 	}
 

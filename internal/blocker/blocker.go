@@ -8,12 +8,15 @@ import (
 
 	"github.com/0xr3ngar/veil/internal/categories"
 	"github.com/0xr3ngar/veil/internal/config"
+	"github.com/0xr3ngar/veil/internal/quotes"
 )
 
 type LogEntry struct {
-	Domain    string    `json:"domain"`
-	ClientIP  string    `json:"client_ip"`
-	Timestamp time.Time `json:"timestamp"`
+	Domain      string    `json:"domain"`
+	ClientIP    string    `json:"client_ip"`
+	Timestamp   time.Time `json:"timestamp"`
+	QuoteText   string    `json:"quote_text"`
+	QuoteSource string    `json:"quote_source"`
 }
 
 type Blocker struct {
@@ -128,10 +131,13 @@ func (b *Blocker) LogBlock(domain, clientIP string) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
+	q := quotes.Random()
 	b.log[b.logPos] = LogEntry{
-		Domain:    domain,
-		ClientIP:  clientIP,
-		Timestamp: time.Now(),
+		Domain:      domain,
+		ClientIP:    clientIP,
+		QuoteText:   q.Text,
+		QuoteSource: q.Source,
+		Timestamp:   time.Now(),
 	}
 	b.logPos = (b.logPos + 1) % maxLogSize
 	if b.logPos == 0 {

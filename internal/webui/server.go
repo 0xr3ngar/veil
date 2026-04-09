@@ -130,11 +130,16 @@ func (s *Server) partialLogs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	for _, entry := range logs {
+		quoteHTML := ""
+		if entry.QuoteText != "" {
+			quoteHTML = fmt.Sprintf(`<div class="quote-text">"%s" — <em>%s</em></div>`,
+				html.EscapeString(entry.QuoteText), html.EscapeString(entry.QuoteSource))
+		}
 		fmt.Fprintf(w, `<tr>
     <td class="time-cell">%s</td>
-    <td class="domain-cell">%s</td>
+    <td class="domain-cell">%s%s</td>
     <td>%s</td>
-</tr>`, entry.Timestamp.Format("15:04:05"), html.EscapeString(entry.Domain), html.EscapeString(entry.ClientIP))
+</tr>`, entry.Timestamp.Format("15:04:05"), html.EscapeString(entry.Domain), quoteHTML, html.EscapeString(entry.ClientIP))
 	}
 }
 
