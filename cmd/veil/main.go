@@ -100,6 +100,13 @@ func cmdStart() {
 		}
 	}()
 
+	go func() {
+		log.Println("blocked page listening on http://127.0.0.1:80")
+		if err := http.ListenAndServe("127.0.0.1:80", webSrv.BlockedHandler()); err != nil {
+			log.Printf("blocked page server error: %v", err)
+		}
+	}()
+
 	if err := writePID(); err != nil {
 		log.Printf("warning: could not write PID file: %v", err)
 	}

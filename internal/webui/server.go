@@ -12,6 +12,7 @@ import (
 	"github.com/0xr3ngar/veil/internal/categories"
 	"github.com/0xr3ngar/veil/internal/config"
 	"github.com/0xr3ngar/veil/internal/lock"
+	"github.com/0xr3ngar/veil/internal/quotes"
 	webstatic "github.com/0xr3ngar/veil/web"
 )
 
@@ -76,6 +77,33 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("POST /partial/lock", s.actionSetLock)
 
 	return mux
+}
+
+func (s *Server) BlockedHandler() http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Serve static CSS for the blocked page
+		if strings.HasPrefix(r.URL.Path, "/static/") {
+			http.StripPrefix("/static/", http.FileServerFS(webstatic.StaticFS)).ServeHTTP(w, r)
+			return
+		}
+
+		q := quotes.Random()
+		var apiPort string
+		s.config.Read(func(cfg *config.Config) {
+			apiPort = cfg.APIListen
+		})
+		// Extract just the port number
+		if idx := strings.LastIndex(apiPort, ":"); idx >= 0 {
+			apiPort = apiPort[idx+1:]
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		data, _ := webstatic.StaticFS.ReadFile("blocked.html")
+		page := strings.Replace(string(data), "{{PORT}}", apiPort, 1)
+		page = strings.Replace(page, `id="quote"></div>`, fmt.Sprintf(`id="quote">"%s"</div>`, html.EscapeString(q.Text)), 1)
+		page = strings.Replace(page, `id="source"></div>`, fmt.Sprintf(`id="source">— %s</div>`, html.EscapeString(q.Source)), 1)
+		fmt.Fprint(w, page)
+	})
 }
 
 func (s *Server) apiProxy(w http.ResponseWriter, r *http.Request) {

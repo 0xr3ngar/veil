@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blocked by Veil</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: var(--bg-deep);
+            text-align: center;
+        }
+        .blocked-container {
+            max-width: 560px;
+            padding: 48px;
+        }
+        .blocked-icon {
+            font-size: 48px;
+            color: var(--accent-gold);
+            margin-bottom: 24px;
+            opacity: 0.7;
+        }
+        .blocked-title {
+            font-family: var(--font-display);
+            font-size: 42px;
+            font-weight: 400;
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            letter-spacing: -0.02em;
+        }
+        .blocked-domain {
+            font-family: var(--font-mono);
+            font-size: 14px;
+            color: var(--accent-red);
+            margin-bottom: 40px;
+            opacity: 0.8;
+        }
+        .blocked-quote {
+            font-family: var(--font-display);
+            font-size: 20px;
+            color: var(--text-primary);
+            line-height: 1.5;
+            margin-bottom: 12px;
+            font-style: italic;
+        }
+        .blocked-source {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            color: var(--accent-gold);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 48px;
+        }
+        .blocked-message {
+            font-size: 12px;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+        .blocked-link {
+            color: var(--accent-gold);
+            text-decoration: none;
+        }
+        .blocked-link:hover {
+            text-decoration: underline;
+        }
+        .cross {
+            display: inline-block;
+            color: var(--accent-gold);
+            font-size: 36px;
+            margin-bottom: 32px;
+            opacity: 0.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="blocked-container">
+        <div class="cross">&#10013;</div>
+        <h1 class="blocked-title">Veiled</h1>
+        <div class="blocked-domain" id="domain"></div>
+        <div class="blocked-quote" id="quote"></div>
+        <div class="blocked-source" id="source"></div>
+        <p class="blocked-message">
+            This site has been blocked by Veil to help you stay focused.<br>
+            <a href="http://127.0.0.1:{{PORT}}/" class="blocked-link">Open Veil Dashboard</a>
+        </p>
+    </div>
+    <script>
+        document.getElementById('domain').textContent = window.location.hostname;
+    </script>
+</body>
+</html>

@@ -26,7 +26,7 @@ func Default() *Config {
 		UpstreamDNS: "8.8.8.8:53",
 		RedirectTo:  "127.0.0.1",
 		DNSListen:   "127.0.0.1:53",
-		APIListen:   "127.0.0.1:8080",
+		APIListen:   "127.0.0.1:6144",
 		LogBlocked:  true,
 		Categories: map[string]bool{
 			"adult":        true,
