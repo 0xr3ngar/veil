@@ -57,8 +57,8 @@ func (b *Blocker) Reload(cfg *config.Config) {
 		if !enabled {
 			continue
 		}
-		if name == "adult" {
-			domains, err := categories.LoadAdultList()
+		if categories.IsExternalList(name) {
+			domains, err := categories.LoadExternalList(name)
 			if err == nil {
 				for _, d := range domains {
 					blocked[normalize(d)] = struct{}{}

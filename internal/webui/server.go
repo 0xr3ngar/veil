@@ -188,14 +188,14 @@ func (s *Server) partialCategories(w http.ResponseWriter, r *http.Request) {
 				checked = "checked"
 			}
 			count := len(categories.All[name])
-			if name == "adult" {
-				count = 447000 // approximate
+			if categories.IsExternalList(name) {
+				count = -1
 			}
 			fmt.Fprintf(w, `
 <div class="category-card">
     <div>
         <div class="category-name">%s</div>
-        <div class="category-count">~%d domains</div>
+        <div class="category-count">%s</div>
     </div>
     <label class="toggle">
         <input type="checkbox" %s
@@ -204,7 +204,7 @@ func (s *Server) partialCategories(w http.ResponseWriter, r *http.Request) {
                hx-swap="none">
         <span class="toggle-slider"></span>
     </label>
-</div>`, html.EscapeString(name), count, checked, html.EscapeString(name))
+</div>`, html.EscapeString(name), formatCount(count), checked, html.EscapeString(name))
 		}
 	})
 }
@@ -440,6 +440,13 @@ func removeStr(slice []string, val string) []string {
 		}
 	}
 	return result
+}
+
+func formatCount(n int) string {
+	if n < 0 {
+		return "external list"
+	}
+	return fmt.Sprintf("~%d domains", n)
 }
 
 func formatDuration(d time.Duration) string {

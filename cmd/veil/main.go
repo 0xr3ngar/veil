@@ -365,15 +365,15 @@ func cmdList() {
 }
 
 func cmdUpdate() {
-	fmt.Println("updating OISD adult list...")
-	domains, err := categories.FetchAdultList()
-	if err != nil {
-		log.Fatalf("failed to fetch list: %v", err)
+	for _, name := range categories.ExternalListNames() {
+		fmt.Printf("updating %s list...\n", name)
+		domains, err := categories.FetchExternalList(name)
+		if err != nil {
+			log.Printf("failed to fetch %s: %v", name, err)
+			continue
+		}
+		fmt.Printf("  %s: %d domains cached\n", name, len(domains))
 	}
-	if err := categories.SaveCache(domains); err != nil {
-		log.Fatalf("failed to save cache: %v", err)
-	}
-	fmt.Printf("updated: %d domains cached\n", len(domains))
 }
 
 func cmdConfig() {

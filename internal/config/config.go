@@ -31,7 +31,8 @@ func Default() *Config {
 		Categories: map[string]bool{
 			"adult":        true,
 			"social_media": true,
-			"gambling":     false,
+			"gambling":     true,
+			"fakenews":     true,
 			"streaming":    false,
 			"doh_bypass":   true,
 		},
